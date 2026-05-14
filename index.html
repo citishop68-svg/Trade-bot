@@ -1,1 +1,517 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#050d1a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SMC Agent">
+<title>SMC Trading Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  
+  :root {
+    --bg: #050d1a;
+    --bg2: #0a1628;
+    --green: #00ff9d;
+    --green-dim: rgba(0,255,157,0.15);
+    --green-glow: rgba(0,255,157,0.4);
+    --blue: #0066ff;
+    --text: #e8f0fe;
+    --text-dim: #4a7a9b;
+    --border: rgba(0,255,157,0.15);
+    --font: 'JetBrains Mono', monospace;
+  }
 
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    font-family: var(--font);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Grid background */
+  #app::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,157,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,157,0.025) 1px, transparent 1px);
+    background-size: 36px 36px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: relative;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(5,13,26,0.95);
+    backdrop-filter: blur(20px);
+    flex-shrink: 0;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, rgba(0,255,157,0.15), rgba(0,102,255,0.15));
+    border: 1px solid rgba(0,255,157,0.35);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 0 16px rgba(0,255,157,0.2);
+  }
+
+  .logo-text { line-height: 1.2; }
+  .logo-title { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; }
+  .logo-title span { color: var(--green); }
+  .logo-sub { font-size: 9px; color: var(--text-dim); letter-spacing: 0.12em; }
+
+  .status {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 10px; color: var(--green); letter-spacing: 0.1em;
+  }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s ease infinite;
+  }
+
+  /* ── QUICK CHIPS ── */
+  .chips {
+    position: relative; z-index: 20;
+    display: flex; gap: 7px;
+    padding: 10px 14px;
+    overflow-x: auto;
+    border-bottom: 1px solid rgba(0,255,157,0.07);
+    flex-shrink: 0;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .chips::-webkit-scrollbar { display: none; }
+
+  .chip {
+    flex-shrink: 0;
+    padding: 5px 12px;
+    background: rgba(0,255,157,0.05);
+    border: 1px solid rgba(0,255,157,0.18);
+    border-radius: 20px;
+    color: #7ec8a0;
+    font-size: 11px;
+    font-family: var(--font);
+    cursor: pointer;
+    transition: all 0.18s;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+    letter-spacing: 0.02em;
+  }
+  .chip:active {
+    background: rgba(0,255,157,0.15);
+    border-color: rgba(0,255,157,0.5);
+    color: var(--green);
+    transform: scale(0.97);
+  }
+
+  /* ── MESSAGES ── */
+  #messages {
+    position: relative; z-index: 10;
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 14px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0,255,157,0.2) transparent;
+  }
+  #messages::-webkit-scrollbar { width: 3px; }
+  #messages::-webkit-scrollbar-thumb { background: rgba(0,255,157,0.2); border-radius: 2px; }
+
+  .msg-row {
+    display: flex;
+    margin-bottom: 14px;
+    animation: fadeUp 0.28s ease;
+  }
+  .msg-row.user { justify-content: flex-end; }
+  .msg-row.assistant { justify-content: flex-start; }
+
+  .avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--green), var(--blue));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; flex-shrink: 0;
+    margin-right: 8px; margin-top: 2px;
+    box-shadow: 0 0 10px rgba(0,255,157,0.35);
+  }
+
+  .bubble {
+    max-width: 82%;
+    padding: 10px 14px;
+    font-size: 13px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .bubble.user {
+    background: linear-gradient(135deg, #0a3d62, #1a5276);
+    border: 1px solid rgba(0,102,255,0.35);
+    border-radius: 16px 16px 3px 16px;
+    color: var(--text);
+    box-shadow: 0 3px 16px rgba(0,102,255,0.12);
+  }
+  .bubble.assistant {
+    background: rgba(255,255,255,0.035);
+    border: 1px solid var(--border);
+    border-radius: 3px 16px 16px 16px;
+    color: var(--text);
+    box-shadow: 0 3px 16px rgba(0,0,0,0.25);
+  }
+  .bubble strong { color: var(--green); font-weight: 600; }
+
+  /* Typing */
+  .typing-row { display: flex; align-items: center; margin-bottom: 14px; }
+  .typing-bubble {
+    background: rgba(255,255,255,0.035);
+    border: 1px solid var(--border);
+    border-radius: 3px 16px 16px 16px;
+    padding: 12px 16px;
+    display: flex; gap: 5px; align-items: center;
+  }
+  .typing-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green);
+    animation: bounce 1.2s ease-in-out infinite;
+  }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+  /* Error */
+  .error-msg {
+    background: rgba(255,50,50,0.07);
+    border: 1px solid rgba(255,80,80,0.25);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: #ff7070;
+    font-size: 12px;
+    margin-bottom: 12px;
+    animation: fadeUp 0.28s ease;
+  }
+
+  /* ── INPUT ── */
+  footer {
+    position: relative; z-index: 20;
+    padding: 10px 14px 14px;
+    border-top: 1px solid rgba(0,255,157,0.1);
+    background: rgba(5,13,26,0.97);
+    backdrop-filter: blur(20px);
+    flex-shrink: 0;
+  }
+
+  .input-row {
+    display: flex; gap: 10px; align-items: flex-end;
+  }
+
+  .input-wrap {
+    flex: 1;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(0,255,157,0.2);
+    border-radius: 14px;
+    padding: 10px 14px;
+    transition: border-color 0.2s;
+  }
+  .input-wrap:focus-within {
+    border-color: rgba(0,255,157,0.5);
+  }
+
+  textarea {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-size: 14px;
+    font-family: var(--font);
+    line-height: 1.5;
+    resize: none;
+    max-height: 100px;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  textarea::placeholder { color: var(--text-dim); }
+  textarea::-webkit-scrollbar { display: none; }
+
+  .send-btn {
+    width: 44px; height: 44px; border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, var(--green), #00cc7d);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.18s;
+    box-shadow: 0 0 18px rgba(0,255,157,0.35);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .send-btn:disabled {
+    background: rgba(0,255,157,0.1);
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+  .send-btn:active:not(:disabled) { transform: scale(0.93); }
+
+  .disclaimer {
+    text-align: center;
+    font-size: 9px;
+    color: #1e3a52;
+    margin-top: 6px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-7px); }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">📈</div>
+      <div class="logo-text">
+        <div class="logo-title">SMC <span>TRADING AGENT</span></div>
+        <div class="logo-sub">Smart Money Concepts · AI</div>
+      </div>
+    </div>
+    <div class="status">
+      <div class="dot"></div>
+      LIVE
+    </div>
+  </header>
+
+  <div class="chips" id="chips"></div>
+
+  <div id="messages"></div>
+
+  <footer>
+    <div class="input-row">
+      <div class="input-wrap">
+        <textarea id="input" placeholder="Тикер, таймфрейм, цена..." rows="1"></textarea>
+      </div>
+      <button class="send-btn" id="sendBtn" disabled>⚡</button>
+    </div>
+    <div class="disclaimer">Не является финансовой консультацией · Торгуй на свой риск</div>
+  </footer>
+</div>
+
+<script>
+const SYSTEM = `Ты — профессиональный ИИ-агент трейдинга Smart Money Concepts (SMC). Анализируешь рынок и даёшь торговые сигналы на основе:
+
+• Структура рынка (BOS / CHoCH)
+• Ордерные блоки (OB) — бычьи и медвежьи
+• Fair Value Gaps (FVG / имбалансы)
+• Premium / Discount зоны (50% Fibonacci)
+• Ликвидность (SSL/BSL, равные максимумы/минимумы)
+• Точки входа (POI — Point of Interest)
+
+При анализе актива структурируй ответ:
+1. **Тренд** — текущая структура
+2. **Ключевые уровни** — OB, FVG, ликвидность
+3. **Сценарий** — вероятное движение цены
+4. **Сетап** — зона входа, SL, TP1, TP2, R:R
+5. **Риск** — условия инвалидации
+
+Отвечай ТОЛЬКО на русском. Будь конкретным, используй цифры.`;
+
+const CHIPS = [
+  { label: "BTC/USD 1D", text: "Проанализируй BTC/USD на дневном таймфрейме. Текущая цена ~67 000$" },
+  { label: "ETH/USD 4H", text: "SMC анализ ETH/USD на H4. Цена сейчас ~3 200$" },
+  { label: "EUR/USD H4", text: "Найди SMC сетап на EUR/USD H4. Цена 1.0820" },
+  { label: "Gold XAU H1", text: "Структура рынка Gold на H1. Цена 2 340$" },
+  { label: "S&P500 1D", text: "Анализ S&P500 на дневном. Цена 5 200" },
+  { label: "HYPE/USDT 4H", text: "Анализ HYPE/USDT на 4H. Цена 39$, был сильный откат от 45.8" },
+  { label: "Риск менеджмент", text: "Как рассчитать размер позиции при депозите 1000$ и риске 1% на сделку?" },
+  { label: "OB vs FVG", text: "Объясни разницу между ордерным блоком и Fair Value Gap" },
+];
+
+let history = [
+  { role: "assistant", content: "Привет! Я ваш ИИ-агент для трейдинга по методологии Smart Money Concepts.\n\nАнализирую структуру рынка, ордерные блоки, FVG и точки входа.\n\nУкажи инструмент + таймфрейм + текущую цену — дам конкретный сетап. 📊" }
+];
+let loading = false;
+
+const messagesEl = document.getElementById("messages");
+const inputEl = document.getElementById("input");
+const sendBtn = document.getElementById("sendBtn");
+const chipsEl = document.getElementById("chips");
+
+// Render chips
+CHIPS.forEach(c => {
+  const btn = document.createElement("button");
+  btn.className = "chip";
+  btn.textContent = c.label;
+  btn.onclick = () => sendMessage(c.text);
+  chipsEl.appendChild(btn);
+});
+
+function formatText(text) {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
+
+function renderMessages() {
+  messagesEl.innerHTML = "";
+  history.forEach(msg => {
+    const row = document.createElement("div");
+    row.className = `msg-row ${msg.role}`;
+
+    if (msg.role === "assistant") {
+      const av = document.createElement("div");
+      av.className = "avatar";
+      av.textContent = "⚡";
+      row.appendChild(av);
+    }
+
+    const bubble = document.createElement("div");
+    bubble.className = `bubble ${msg.role}`;
+    // Safe render with bold support
+    const escaped = msg.content
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    bubble.innerHTML = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    row.appendChild(bubble);
+    messagesEl.appendChild(row);
+  });
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function showTyping() {
+  const row = document.createElement("div");
+  row.className = "typing-row";
+  row.id = "typing";
+  const av = document.createElement("div");
+  av.className = "avatar"; av.textContent = "⚡";
+  const bub = document.createElement("div");
+  bub.className = "typing-bubble";
+  for(let i=0;i<3;i++){
+    const d = document.createElement("div");
+    d.className = "typing-dot";
+    bub.appendChild(d);
+  }
+  row.appendChild(av); row.appendChild(bub);
+  messagesEl.appendChild(row);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function hideTyping() {
+  const t = document.getElementById("typing");
+  if (t) t.remove();
+}
+
+function showError(msg) {
+  const el = document.createElement("div");
+  el.className = "error-msg";
+  el.textContent = msg;
+  messagesEl.appendChild(el);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+async function sendMessage(text) {
+  const userText = text || inputEl.value.trim();
+  if (!userText || loading) return;
+
+  history.push({ role: "user", content: userText });
+  inputEl.value = "";
+  inputEl.style.height = "auto";
+  updateBtn();
+  renderMessages();
+  showTyping();
+  loading = true;
+  updateBtn();
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        system: SYSTEM,
+        messages: history.map(m => ({ role: m.role, content: m.content }))
+      })
+    });
+
+    if (!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    const reply = data.content?.[0]?.text || "Нет ответа.";
+    history.push({ role: "assistant", content: reply });
+  } catch(e) {
+    showError("⚠️ Ошибка подключения. Проверь интернет и попробуй снова.");
+  } finally {
+    hideTyping();
+    loading = false;
+    updateBtn();
+    renderMessages();
+  }
+}
+
+function updateBtn() {
+  sendBtn.disabled = loading || !inputEl.value.trim();
+  sendBtn.textContent = loading ? "⏳" : "⚡";
+}
+
+inputEl.addEventListener("input", () => {
+  inputEl.style.height = "auto";
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 100) + "px";
+  updateBtn();
+});
+
+inputEl.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+sendBtn.addEventListener("click", () => sendMessage());
+
+// Initial render
+renderMessages();
+</script>
+</body>
+</html>
